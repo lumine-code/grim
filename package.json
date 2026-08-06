@@ -1,38 +1,45 @@
 {
-  "name": "grim",
-  "version": "2.0.3",
-  "description": "Log usage of deprecated methods",
-  "main": "./lib/grim",
+  "name": "@lumine-code/grim",
+  "version": "1.0.0",
+  "description": "Tracks deprecated API calls and the code that made them.",
+  "license": "MIT",
+  "main": "./src/grim.js",
   "scripts": {
-    "prepublish": "grunt clean lint coffee",
-    "test": "grunt test"
+    "test": "jasmine",
+    "lint": "eslint . --max-warnings 0 && prettier --check .",
+    "format": "prettier --write ."
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/atom/grim.git"
+  "repository": "https://github.com/lumine-code/grim",
+  "bugs": "https://github.com/lumine-code/grim/issues",
+  "homepage": "https://github.com/lumine-code/grim/",
+  "author": "lumine-code",
+  "publishConfig": {
+    "access": "public"
   },
-  "bugs": {
-    "url": "https://github.com/atom/grim/issues"
+  "engines": {
+    "node": ">=24"
   },
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://github.com/atom/grim/raw/master/LICENSE.md"
-    }
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "grim",
+    "deprecation",
+    "call-site",
+    "stack-trace",
+    "diagnostics",
+    "lumine"
   ],
   "dependencies": {
-    "event-kit": "^2.0.0"
+    "@lumine-code/event-kit": "github:lumine-code/event-kit#fcd72380dff55925c2224251bc3dc81f35665437"
   },
   "devDependencies": {
-    "coffee-script": "^1.7.0",
-    "jasmine-focused": "^1.0.4",
-    "grunt-contrib-coffee": "^0.9.0",
-    "grunt-cli": "^0.1.8",
-    "grunt": "^0.4.1",
-    "grunt-shell": "^0.2.2",
-    "grunt-coffeelint": "^0.0.6",
-    "rimraf": "^2.2.2",
-    "coffee-cache": "^0.2.0",
-    "temp": "^0.6.0"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.2.2",
+    "globals": "^17.9.0",
+    "jasmine": "^6.3.0",
+    "prettier": "^3.9.6"
   }
 }

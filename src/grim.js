@@ -1,88 +1,128 @@
-Deprecation = require './deprecation'
+const Deprecation = require("./deprecation");
 
-unless global.__grim__?
-  {Emitter} = require 'event-kit'
-  grim = global.__grim__ =
-    deprecations: {}
-    emitter: new Emitter
-    includeDeprecatedAPIs: true
+// The registry lives on the global rather than in this module's scope, and the
+// module exports that global object rather than a fresh one.
+//
+// This is load-bearing, not incidental. The editor and the package that
+// surfaces deprecations resolve their own copies of this library -- a bundled
+// package pins its own -- and both must see one registry. If each copy kept
+// private state, a deprecation recorded through the editor's copy would never
+// appear in the panel reading through the package's, and the spec runner, which
+// gates its exit code on the deprecation count, would go quietly *greener*
+// rather than red. Keep the guard and the export exactly as they are.
+if (global.__grim__ == null) {
+  const { Emitter } = require("@lumine-code/event-kit");
 
-    getDeprecations: ->
-      deprecations = []
-      for fileName, deprecationsByLineNumber of grim.deprecations
-        for lineNumber, deprecationsByPackage of deprecationsByLineNumber
-          for packageName, deprecation of deprecationsByPackage
-            deprecations.push(deprecation)
-      deprecations
+  global.__grim__ = {
+    deprecations: {},
+    emitter: new Emitter(),
+    includeDeprecatedAPIs: true,
 
-    getDeprecationsLength: ->
-      @getDeprecations().length
+    getDeprecations() {
+      const deprecations = [];
 
-    clearDeprecations: ->
-      grim.deprecations = {}
-      return
+      for (const deprecationsByLineNumber of Object.values(grim.deprecations)) {
+        for (const deprecationsByPackage of Object.values(deprecationsByLineNumber)) {
+          for (const deprecation of Object.values(deprecationsByPackage)) {
+            deprecations.push(deprecation);
+          }
+        }
+      }
 
-    logDeprecations: ->
-      deprecations = @getDeprecations()
-      deprecations.sort (a, b) -> b.getCallCount() - a.getCallCount()
+      return deprecations;
+    },
 
-      console.warn "\nCalls to deprecated functions\n-----------------------------"
-      for deprecation in deprecations
-        console.warn "(#{deprecation.getCallCount()}) #{deprecation.getOriginName()} : #{deprecation.getMessage()}", deprecation
-      return
+    getDeprecationsLength() {
+      return this.getDeprecations().length;
+    },
 
-    deprecate: (message, metadata) ->
-      # Capture a 5-deep stack trace
-      originalStackTraceLimit = Error.stackTraceLimit
-      try
-        Error.stackTraceLimit = 7
-        error = new Error
-        # Get an array of v8 CallSite objects
-        stack = error.getRawStack?() ? getRawStack(error)
-        stack = stack.slice(1)
-      finally
-        Error.stackTraceLimit = originalStackTraceLimit
+    clearDeprecations() {
+      grim.deprecations = {};
+    },
 
-      # Find or create a deprecation for this site
-      deprecationSite = stack[0]
-      fileName = deprecationSite.getFileName()
-      lineNumber = deprecationSite.getLineNumber()
-      packageName = metadata?.packageName ? ""
-      grim.deprecations[fileName] ?= {}
-      grim.deprecations[fileName][lineNumber] ?= {}
-      grim.deprecations[fileName][lineNumber][packageName] ?= new Deprecation(message)
+    logDeprecations() {
+      const deprecations = this.getDeprecations();
+      deprecations.sort((a, b) => b.getCallCount() - a.getCallCount());
 
-      deprecation = grim.deprecations[fileName][lineNumber][packageName]
+      console.warn("\nCalls to deprecated functions\n-----------------------------");
+      for (const deprecation of deprecations) {
+        console.warn(
+          `(${deprecation.getCallCount()}) ${deprecation.getOriginName()} : ${deprecation.getMessage()}`,
+          deprecation,
+        );
+      }
+    },
 
-      # Add the current stack trace to the deprecation
-      deprecation.addStack(stack, metadata)
-      grim.emitter.emit("updated", deprecation)
-      return
+    deprecate(message, metadata) {
+      const originalStackTraceLimit = Error.stackTraceLimit;
+      let stack;
 
-    addSerializedDeprecation: (serializedDeprecation) ->
-      deprecation = Deprecation.deserialize(serializedDeprecation)
-      message = deprecation.getMessage()
-      {fileName, lineNumber} = deprecation
-      stacks = deprecation.getStacks()
-      packageName = stacks[0]?.metadata?.packageName ? ""
+      try {
+        // Deep enough to name the caller and its caller, shallow enough that a
+        // deprecation on a hot path stays cheap.
+        Error.stackTraceLimit = 7;
+        const error = new Error();
+        // The editor installs `getRawStack` on Error.prototype via its compile
+        // cache; fall back to capturing one directly when it has not.
+        stack =
+          (typeof error.getRawStack === "function" ? error.getRawStack() : null) ??
+          getRawStack(error);
+        stack = stack.slice(1);
+      } finally {
+        Error.stackTraceLimit = originalStackTraceLimit;
+      }
 
-      grim.deprecations[fileName] ?= {}
-      grim.deprecations[fileName][lineNumber] ?= {}
-      grim.deprecations[fileName][lineNumber][packageName] ?= new Deprecation(message, fileName, lineNumber)
+      const deprecationSite = stack[0];
+      const fileName = deprecationSite.getFileName();
+      const lineNumber = deprecationSite.getLineNumber();
+      const packageName = metadata?.packageName ?? "";
 
-      deprecation = grim.deprecations[fileName][lineNumber][packageName]
-      deprecation.addStack(stack, stack.metadata) for stack in stacks
-      grim.emitter.emit("updated", deprecation)
-      return
+      grim.deprecations[fileName] ??= {};
+      grim.deprecations[fileName][lineNumber] ??= {};
+      grim.deprecations[fileName][lineNumber][packageName] ??= new Deprecation(message);
 
-    on: (eventName, callback) -> grim.emitter.on(eventName, callback)
+      const deprecation = grim.deprecations[fileName][lineNumber][packageName];
+      deprecation.addStack(stack, metadata);
+      grim.emitter.emit("updated", deprecation);
+    },
 
-getRawStack = (error) ->
-  originalPrepareStackTrace = Error.prepareStackTrace
-  Error.prepareStackTrace = (error, stack) -> stack
-  Error.captureStackTrace(error, getRawStack)
-  result = error.stack
-  Error.prepareStackTrace = originalPrepareStackTrace
-  result
+    addSerializedDeprecation(serializedDeprecation) {
+      const deserialized = Deprecation.deserialize(serializedDeprecation);
+      const message = deserialized.getMessage();
+      const { fileName, lineNumber } = deserialized;
+      const stacks = deserialized.getStacks();
+      const packageName = stacks[0]?.metadata?.packageName ?? "";
 
-module.exports = global.__grim__
+      grim.deprecations[fileName] ??= {};
+      grim.deprecations[fileName][lineNumber] ??= {};
+      grim.deprecations[fileName][lineNumber][packageName] ??= new Deprecation(
+        message,
+        fileName,
+        lineNumber,
+      );
+
+      const deprecation = grim.deprecations[fileName][lineNumber][packageName];
+      for (const stack of stacks) {
+        deprecation.addStack(stack, stack.metadata);
+      }
+      grim.emitter.emit("updated", deprecation);
+    },
+
+    on(eventName, callback) {
+      return grim.emitter.on(eventName, callback);
+    },
+  };
+}
+
+const grim = global.__grim__;
+
+function getRawStack(error) {
+  const originalPrepareStackTrace = Error.prepareStackTrace;
+  Error.prepareStackTrace = (_error, stack) => stack;
+  Error.captureStackTrace(error, getRawStack);
+  const result = error.stack;
+  Error.prepareStackTrace = originalPrepareStackTrace;
+  return result;
+}
+
+module.exports = grim;
