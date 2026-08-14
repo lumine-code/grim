@@ -2,10 +2,7 @@
 
 Tracks deprecated API calls and the code that made them.
 
-Calling `deprecate()` from a deprecated function records the call site, the
-stacks that reached it, and how many times each one did. The editor surfaces
-what accumulates through the `deprecation-cop` package, and its spec runner
-fails a run that adds new deprecation calls.
+Calling `deprecate()` from a deprecated function records the call site, the stacks that reached it, and how many times each one did. The editor surfaces what accumulates through the `deprecation-cop` package, and its spec runner fails a run that adds new deprecation calls.
 
 ## Features
 
@@ -47,11 +44,7 @@ grim.clearDeprecations(); // reset the registry
 
 ## The shared registry
 
-The registry lives on `global.__grim__` and this module exports that object
-rather than a fresh one. That is deliberate: the editor and the package that
-displays deprecations each resolve their own copy, and both have to see the
-same state. A copy that kept private state would leave the panel empty while
-looking perfectly healthy, so the guard and the export must stay as they are.
+The registry lives on `global.__grim__` and this module exports that object rather than a fresh one. That is deliberate: the editor and the package that displays deprecations each resolve their own copy, and both have to see the same state. A copy that kept private state would leave the panel empty while looking perfectly healthy, so the guard and the export must stay as they are.
 
 ## Contributing
 
