@@ -31,7 +31,7 @@
     "lumine"
   ],
   "dependencies": {
-    "@lumine-code/event-kit": "github:lumine-code/event-kit#3205d19fd0ca20077def9214d3475f26d502cc09"
+    "@lumine-code/event-kit": "github:lumine-code/event-kit#7c27feaa3c943f3f55485b18ed54e778765086d3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
