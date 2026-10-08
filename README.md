@@ -2,6 +2,8 @@
 
 Tracks deprecated API calls and the code that made them.
 
+Fork of [pulsar-edit/grim](https://github.com/pulsar-edit/grim).
+
 Calling `deprecate()` from a deprecated function records the call site, the stacks that reached it, and how many times each one did. The editor surfaces what accumulates through the `deprecation-cop` package, and its spec runner fails a run that adds new deprecation calls.
 
 ## Features
